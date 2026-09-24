@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A little puzzle for you 💗</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Fredoka & Quicksand -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'cursive'],
+                        quicksand: ['Quicksand', 'sans-serif'],
+                    },
+                    colors: {
+                        pastel: {
+                            pink: '#FFD6E8',
+                            lightPink: '#FFF0F5',
+                            deepPink: '#FF85B3',
+                            rose: '#FF4B82',
+                            purple: '#E8D5FF',
+                            softYellow: '#FFF4CC',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: 'Fredoka', cursive;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow-x: hidden;
+            background: linear-gradient(135deg, #FFF0F5 0%, #FFD6E8 50%, #E8D5FF 100%);
+            min-height: 100vh;
+        }
+
+        .cute-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 20px 40px rgba(255, 133, 179, 0.25);
+        }
+
+        .heart-particle {
+            position: fixed;
+            bottom: -50px;
+            font-size: 1.2rem;
+            pointer-events: none;
+            z-index: 0;
+            animation: floatUp 8s linear infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0) rotate(0deg) scale(0.8);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(-110vh) rotate(360deg) scale(1.3);
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(255, 133, 179, 0.6)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(255, 75, 130, 0.8)); }
+        }
+
+        .pulse-cute {
+            animation: pulseGlow 2.5s infinite ease-in-out;
+        }
+
+        /* Puzzle tile active selection glow */
+        .tile-selected {
+            outline: 4px solid #FF4B82 !important;
+            outline-offset: -4px;
+            transform: scale(0.95);
+            filter: brightness(1.15);
+            z-index: 10;
+        }
+
+        .tile-hover:hover {
+            filter: brightness(1.05);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-700 flex flex-col justify-between items-center p-4 sm:p-6 relative">
+
+    <div id="heartContainer" class="fixed inset-0 pointer-events-none z-0"></div>
+
+    <!-- Header Section -->
+    <header class="w-full max-w-md mx-auto flex justify-between items-center z-10 py-2">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl animate-bounce">💖</span>
+            <span class="text-lg font-bold text-slate-700 font-fredoka tracking-wide">LovePuzzle</span>
+        </div>
+        <div class="text-xs px-3 py-1 bg-white/80 rounded-full text-pastel-rose font-bold shadow-sm border border-white">
+            <i class="fa-solid fa-sparkles"></i> For Jeppy
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <main class="w-full max-w-md mx-auto my-auto z-10">
+
+        <!-- 1. OPENING SCREEN -->
+        <section id="openingScreen" class="cute-card rounded-3xl p-6 sm:p-8 text-center transition-all duration-500">
+            <div class="relative inline-block mb-4">
+                <div class="w-24 h-24 bg-gradient-to-tr from-pastel-deepPink to-pastel-pink rounded-full flex items-center justify-center mx-auto shadow-lg shadow-pastel-deepPink/30 pulse-cute border-4 border-white">
+                    <span class="text-5xl">🎁</span>
+                </div>
+                <span class="absolute -top-1 -right-1 text-2xl animate-pulse">✨</span>
+                <span class="absolute -bottom-1 -left-1 text-2xl animate-pulse">🌸</span>
+            </div>
+
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-2 leading-tight">
+                A little puzzle for you 💗
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 font-quicksand font-semibold mb-8">
+                Swap the pieces to complete our picture and unlock your secret passcode!
+            </p>
+
+            <button id="startPuzzleBtn" class="w-full py-4 px-6 bg-gradient-to-r from-pastel-deepPink to-pastel-rose hover:from-pastel-rose hover:to-pastel-deepPink text-white font-bold text-lg rounded-2xl shadow-xl shadow-pastel-rose/40 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 active:scale-95 flex items-center justify-center gap-3">
+                <span>Start Puzzle</span>
+                <i class="fa-solid fa-heart text-white text-sm"></i>
+            </button>
+        </section>
+
+        <!-- 2. PUZZLE SCREEN -->
+        <section id="puzzleScreen" class="cute-card rounded-3xl p-5 sm:p-6 text-center hidden transition-all duration-500">
+            <!-- Header bar for puzzle -->
+            <div class="flex justify-between items-center mb-3 bg-white/70 px-4 py-2 rounded-2xl border border-white">
+                <div class="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                    <i class="fa-solid fa-hand-pointer text-pastel-deepPink"></i>
+                    <span id="instructionText">Tap a piece, then tap another to swap</span>
+                </div>
+                <button id="hintBtn" class="text-xs font-bold text-pastel-deepPink hover:text-pastel-rose flex items-center gap-1 transition">
+                    <i class="fa-solid fa-lightbulb"></i> Hint
+                </button>
+            </div>
+
+            <!-- Puzzle Container (2 rows x 3 columns) -->
+            <div class="relative w-full aspect-[3/2] bg-pink-100/60 rounded-2xl p-2 border-2 border-dashed border-pastel-deepPink/40 shadow-inner mb-4 overflow-hidden">
+                
+                <!-- Loading Overlay while image preloads -->
+                <div id="puzzleLoader" class="absolute inset-0 bg-white/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center rounded-xl p-4">
+                    <div class="w-10 h-10 border-4 border-pastel-deepPink border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <span class="text-xs font-bold text-pastel-deepPink">Loading puzzle photo...</span>
+                </div>
+
+                <!-- 6 Puzzle Tiles Grid -->
+                <div id="puzzleBoard" class="w-full h-full grid grid-cols-3 grid-rows-2 gap-1.5 sm:gap-2">
+                    <!-- Tiles will be dynamically injected here -->
+                </div>
+            </div>
+
+            <!-- Puzzle Controls -->
+            <div class="flex gap-2">
+                <button id="shuffleBtn" class="flex-1 py-3 px-4 bg-white hover:bg-pink-50 text-pastel-deepPink font-bold text-xs sm:text-sm rounded-xl border border-pink-200 shadow-sm transition active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-arrows-rotate"></i> Reshuffle
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. SUCCESS / REWARD SCREEN -->
+        <section id="successScreen" class="cute-card rounded-3xl p-6 sm:p-8 text-center hidden transition-all duration-500 transform">
+            <div class="relative inline-block mb-3">
+                <div class="w-20 h-20 bg-gradient-to-tr from-pink-400 to-rose-400 text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-rose-300 ring-8 ring-pink-100/80 animate-bounce">
+                    <span class="text-4xl">💌</span>
+                </div>
+            </div>
+
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-1">
+                You solved it! ♡
+            </h2>
+            <p class="text-xs text-slate-500 font-quicksand font-semibold mb-5">
+                Here is your passcode & special gift link!
+            </p>
+
+            <!-- Passcode Box -->
+            <div class="bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 border-2 border-dashed border-pastel-deepPink/60 rounded-2xl p-4 mb-5 relative shadow-inner">
+                <span class="text-[10px] font-bold tracking-widest text-pastel-deepPink uppercase block mb-1">YOUR PASSCODE</span>
+                <div class="text-2xl sm:text-3xl font-black text-slate-800 tracking-wider font-mono my-1 selection:bg-pink-200">
+                    PASSCODE: <span id="passcodeText" class="text-pastel-rose">260526</span>
+                </div>
+                <button id="copyPasscodeBtn" class="mt-2 w-full py-2 px-3 bg-white hover:bg-pink-100 text-pastel-deepPink text-xs font-bold rounded-xl border border-pink-200 transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95">
+                    <i class="fa-regular fa-copy"></i> <span id="copyBtnLabel">Copy Passcode</span>
+                </button>
+            </div>
+
+            <!-- Target Website Button -->
+            <a id="giftWebBtn" href="https://cliffordraphael0-eng.github.io/loveletterforjeppy/" target="_blank" rel="noopener noreferrer" class="w-full py-4 px-6 bg-gradient-to-r from-pastel-deepPink via-pastel-rose to-purple-500 hover:brightness-105 text-white font-bold rounded-2xl shadow-xl shadow-pastel-rose/30 transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 text-base mb-3">
+                <span>Open Your Gift →</span>
+            </a>
+
+            <button id="replayBtn" class="text-xs font-bold text-slate-400 hover:text-pastel-deepPink transition">
+                Play Again 🔄
+            </button>
+        </section>
+
+    </main>
+
+    <!-- Hint Preview Modal -->
+    <div id="hintModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl p-5 max-w-xs w-full shadow-2xl text-center border-4 border-pink-100">
+            <h4 class="text-sm font-bold text-slate-700 mb-3">Full Image Reference</h4>
+            <div class="aspect-[3/2] rounded-2xl overflow-hidden mb-4 border border-pink-200 shadow-inner">
+                <img id="hintImg" src="" alt="Complete Puzzle" class="w-full h-full object-cover">
+            </div>
+            <button id="closeHintBtn" class="w-full py-2.5 bg-pastel-deepPink text-white font-bold text-xs rounded-xl hover:bg-pastel-rose transition">
+                Back to Puzzle
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800/90 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 opacity-0 transition-opacity duration-300 pointer-events-none z-50 border border-white/20 backdrop-blur-md">
+        <span class="text-base">✨</span>
+        <span id="toastMsg">Passcode copied to clipboard!</span>
+    </div>
+
+    <footer class="w-full max-w-md mx-auto text-center text-xs text-slate-400 font-quicksand font-semibold z-10 py-2">
+        Made with 💕 for you
+    </footer>
+
+    <script>
+        const GAME_CONFIG = {
+            passcode: "260526",
+            giftUrl: "https://cliffordraphael0-eng.github.io/loveletterforjeppy/",
+            puzzleImage: "https://i.pinimg.com/736x/be/59/dd/be59dda506b6d5e3f81dec886973a5f5.jpg"
+        };
+
+        // State tracking
+        const SOLVED_STATE = [0, 1, 2, 3, 4, 5];
+        let currentState = [0, 1, 2, 3, 4, 5];
+        let selectedIndex = null;
+
+        // Elements
+        const openingScreen = document.getElementById('openingScreen');
+        const puzzleScreen = document.getElementById('puzzleScreen');
+        const successScreen = document.getElementById('successScreen');
+        const puzzleBoard = document.getElementById('puzzleBoard');
+        const puzzleLoader = document.getElementById('puzzleLoader');
+        const hintImg = document.getElementById('hintImg');
+
+        function createHeartParticles() {
+            const container = document.getElementById('heartContainer');
+            const hearts = ['🌸', '💗', '✨', '💖', '🧸', '💕'];
+            
+            setInterval(() => {
+                const particle = document.createElement('div');
+                particle.className = 'heart-particle';
+                particle.innerText = hearts[Math.floor(Math.random() * hearts.length)];
+                particle.style.left = Math.random() * 100 + 'vw';
+                particle.style.animationDuration = (5 + Math.random() * 5) + 's';
+                particle.style.fontSize = (0.9 + Math.random() * 0.8) + 'rem';
+                
+                container.appendChild(particle);
+                setTimeout(() => particle.remove(), 8000);
+            }, 700);
+        }
+
+        function preloadPuzzleImage() {
+            const img = new Image();
+            img.src = GAME_CONFIG.puzzleImage;
+            
+            img.onload = () => {
+                hintImg.src = GAME_CONFIG.puzzleImage;
+                puzzleLoader.classList.add('hidden');
+                renderBoard();
+            };
+
+            img.onerror = () => {
+                // Sembunyikan loader jika terjadi kendala jaringan agar puzzle tetap dapat dimainkan
+                hintImg.src = GAME_CONFIG.puzzleImage;
+                puzzleLoader.classList.add('hidden');
+                renderBoard();
+            };
+        }
+
+        function shuffleState() {
+            do {
+                currentState = [...SOLVED_STATE].sort(() => Math.random() - 0.5);
+            } while (isSolved()); // Memastikan tidak langsung tersusun rapi saat mulai
+            selectedIndex = null;
+        }
+
+        function isSolved() {
+            return currentState.every((val, idx) => val === SOLVED_STATE[idx]);
+        }
+
+        function renderBoard() {
+            puzzleBoard.innerHTML = '';
+
+            currentState.forEach((pieceId, slotIndex) => {
+                const tile = document.createElement('div');
+                
+                // Kalkulasi kolom dan baris untuk grid 3x2
+                const col = pieceId % 3;
+                const row = Math.floor(pieceId / 3);
+
+                // Posisi background (0%, 50%, 100% horizontal | 0%, 100% vertikal)
+                const posX = col * 50; 
+                const posY = row * 100;
+
+                tile.className = `w-full h-full rounded-xl shadow-md border-2 border-white relative overflow-hidden transition-all duration-200 tile-hover cursor-pointer ${selectedIndex === slotIndex ? 'tile-selected' : ''}`;
+                
+                tile.style.backgroundImage = `url('${GAME_CONFIG.puzzleImage}')`;
+                tile.style.backgroundSize = '300% 200%';
+                tile.style.backgroundPosition = `${posX}% ${posY}%`;
+
+                // Event listener
+                tile.onclick = () => handleTileClick(slotIndex);
+
+                // Indikator saat kepingan dipilih
+                if (selectedIndex === slotIndex) {
+                    const badge = document.createElement('div');
+                    badge.className = 'absolute top-1 right-1 bg-pastel-rose text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center font-bold shadow';
+                    badge.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    tile.appendChild(badge);
+                }
+
+                puzzleBoard.appendChild(tile);
+            });
+        }
+
+        function handleTileClick(slotIndex) {
+            if (selectedIndex === null) {
+                selectedIndex = slotIndex;
+                renderBoard();
+            } else if (selectedIndex === slotIndex) {
+                selectedIndex = null;
+                renderBoard();
+            } else {
+                // Tukar kepingan A dan kepingan B
+                const temp = currentState[selectedIndex];
+                currentState[selectedIndex] = currentState[slotIndex];
+                currentState[slotIndex] = temp;
+                
+                selectedIndex = null;
+                renderBoard();
+
+                // Cek apakah puzzle sudah selesai
+                if (isSolved()) {
+                    setTimeout(handleWin, 300);
+                }
+            }
+        }
+
+        function handleWin() {
+            if (window.confetti) {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#FF85B3', '#FF4B82', '#FFD6E8', '#E8D5FF']
+                });
+            }
+
+            puzzleScreen.classList.add('hidden');
+            successScreen.classList.remove('hidden');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.innerText = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        function copyPasscode() {
+            const passcode = GAME_CONFIG.passcode;
+            
+            const textarea = document.createElement('textarea');
+            textarea.value = passcode;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
+                document.getElementById('copyBtnLabel').innerText = "Copied! ✨";
+                showToast("Passcode 260526 copied!");
+                setTimeout(() => {
+                    document.getElementById('copyBtnLabel').innerText = "Copy Passcode";
+                }, 3000);
+            } catch (err) {
+                showToast("Passcode: " + passcode);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        window.onload = function() {
+            createHeartParticles();
+            preloadPuzzleImage();
+
+            // Tombol Start Puzzle
+            document.getElementById('startPuzzleBtn').onclick = () => {
+                openingScreen.classList.add('hidden');
+                puzzleScreen.classList.remove('hidden');
+                shuffleState();
+                renderBoard();
+            };
+
+            // Tombol Reshuffle
+            document.getElementById('shuffleBtn').onclick = () => {
+                shuffleState();
+                renderBoard();
+                showToast("Puzzle reshuffled!");
+            };
+
+            // Modal Hint
+            document.getElementById('hintBtn').onclick = () => {
+                document.getElementById('hintModal').classList.remove('hidden');
+                document.getElementById('hintModal').classList.add('flex');
+            };
+
+            document.getElementById('closeHintBtn').onclick = () => {
+                document.getElementById('hintModal').classList.add('hidden');
+                document.getElementById('hintModal').classList.remove('flex');
+            };
+
+            // Copy Passcode
+            document.getElementById('copyPasscodeBtn').onclick = copyPasscode;
+
+            // Replay Button
+            document.getElementById('replayBtn').onclick = () => {
+                successScreen.classList.add('hidden');
+                openingScreen.classList.remove('hidden');
+            };
+        };
+    </script>
+</body>
+</html>
